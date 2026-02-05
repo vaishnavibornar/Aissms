@@ -1,141 +1,142 @@
-/* Container: Centers the card on the screen */
-.auth-container {
-  min-height: calc(100vh - 64px); /* Full viewport height minus navbar */
+/* Layout Wrapper */
+.auth-split-wrapper {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  font-family: 'Archivo', sans-serif;
+  overflow: hidden;
+}
+
+/* Green Side Panel */
+.auth-panel-green {
+  flex: 1;
+  background: linear-gradient(135deg, #22c55e 0%, #15803d 100%); /* Green Gradient */
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  background: linear-gradient(135deg, var(--secondary) 0%, #ffffff 100%);
+  text-align: center;
+  padding: 40px;
+  position: relative;
 }
 
-/* Card: The white box holding the form */
-.auth-card {
+.green-content { max-width: 400px; }
+.leaf-logo-large { font-size: 4rem; margin-bottom: 20px; display: block; }
+.auth-panel-green h2 {
+  font-family: 'Bitter', serif;
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+}
+.auth-panel-green p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+/* Form Side Panel */
+.auth-panel-form {
+  flex: 1;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  overflow-y: auto; /* Handle smaller screens */
+}
+
+.form-container {
   width: 100%;
   max-width: 420px;
-  padding: 40px;
-  background: var(--white);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  animation: slideUp 0.4s ease-out;
 }
 
-/* Typography */
-.auth-card h2 {
-  text-align: center;
-  margin-bottom: 25px;
-  color: var(--primary-dark);
+/* Header Section */
+.brand-header {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #111827;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 40px;
+}
+
+.auth-header h2 {
   font-family: 'Bitter', serif;
   font-size: 2rem;
+  color: #111827;
+  margin-bottom: 8px;
 }
+.auth-header p { color: #6b7280; margin-bottom: 30px; font-size: 0.95rem; }
 
-/* Form Structure */
-.auth-card form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+/* Role Cards (Sign Up) */
+.role-selector { margin-bottom: 25px; }
+.field-label { font-size: 0.9rem; color: #374151; margin-bottom: 10px; display: block; }
+.role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.role-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; flex-direction: column; gap: 10px;
 }
+.role-card:hover { border-color: #22c55e; background: #f0fdf4; }
+.role-card.selected { border-color: #15803d; background: #ecfdf5; box-shadow: 0 0 0 1px #15803d; }
+.role-icon { font-size: 1.5rem; }
+.role-text strong { display: block; font-size: 0.95rem; color: #111827; }
+.role-text span { font-size: 0.75rem; color: #6b7280; }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-/* Inputs */
-.auth-card input, 
-.auth-card select {
+/* Form Inputs */
+.input-group { margin-bottom: 20px; }
+.input-group label { display: block; font-size: 0.9rem; color: #374151; margin-bottom: 8px; font-weight: 500; }
+.input-group input {
   width: 100%;
   padding: 12px 15px;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 1rem;
-  font-family: 'Archivo', sans-serif;
-  transition: all 0.2s;
-  background-color: #f9fafb;
+  transition: border-color 0.2s;
 }
+.input-group input:focus { outline: none; border-color: #22c55e; ring: 2px solid #bbf7d0; }
+.hint { font-size: 0.75rem; color: #6b7280; margin-top: 5px; display: block; }
 
-.auth-card input:focus, 
-.auth-card select:focus {
-  border-color: var(--primary);
-  background-color: #fff;
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
-}
+.label-row { display: flex; justify-content: space-between; }
+.forgot-link { font-size: 0.85rem; color: #15803d; cursor: pointer; font-weight: 600; }
 
-/* Role Selection Specifics */
-.role-label {
-  font-size: 0.9rem;
-  color: var(--text-light);
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.role-select {
-  cursor: pointer;
-}
-
-/* Buttons */
-.full-width {
+/* Buttons & Links */
+.btn-auth-submit {
   width: 100%;
+  background: #4d7c0f; /* Match dark green btn */
+  background: linear-gradient(90deg, #5a9e22, #4d7c0f);
+  color: white;
+  padding: 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 1rem;
   margin-top: 10px;
-  justify-content: center;
-  font-size: 1.05rem;
+  transition: opacity 0.2s;
 }
+.btn-auth-submit:hover { opacity: 0.9; }
 
-/* Error Messages */
-.error-alert {
-  background-color: #fef2f2;
-  color: #991b1b;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  font-size: 0.9rem;
+.auth-footer-link {
   text-align: center;
-  border: 1px solid #fecaca;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Toggle Section (Bottom) */
-.auth-toggle {
   margin-top: 25px;
-  text-align: center;
-  padding-top: 20px;
-  border-top: 1px solid #f3f4f6;
+  font-size: 0.9rem;
+  color: #374151;
 }
-
-.auth-toggle p {
-  color: var(--text-light);
-  font-size: 0.95rem;
-  margin: 0;
-}
-
-/* Text Link Button */
-.text-link {
-  background: none;
-  border: none;
-  color: var(--primary);
-  font-weight: 700;
+.auth-footer-link span {
+  color: #15803d;
+  font-weight: 600;
   cursor: pointer;
-  padding: 0 5px;
-  font-size: 0.95rem;
-  text-decoration: underline;
-  transition: color 0.2s;
+  margin-left: 5px;
+}
+.auth-footer-link span:hover { text-decoration: underline; }
+
+.error-msg {
+  background: #fee2e2; color: #991b1b; padding: 10px;
+  border-radius: 6px; margin-bottom: 20px; font-size: 0.9rem; text-align: center;
 }
 
-.text-link:hover {
-  color: var(--primary-dark);
-}
-
-/* Animation */
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Mobile Responsive */
+@media (max-width: 900px) {
+  .auth-panel-green { display: none; } /* Hide green panel on mobile */
+  .auth-panel-form { padding: 20px; }
 }

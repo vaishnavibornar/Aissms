@@ -51,3 +51,9 @@
 .badge.pending { background: #fff7ed; color: #c2410c; }
 .badge.resolved { background: #ecfdf5; color: #047857; }
 .badge.rejected { background: #fef2f2; color: #b91c1c; }
+.badge.approved { background: #eff6ff; color: #2563eb; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
