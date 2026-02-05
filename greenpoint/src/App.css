@@ -1,0 +1,65 @@
+/* Navigation Bar */
+.navbar {
+  background-color: var(--primary);
+  padding: 0 20px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: 'Bitter', serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--white);
+  letter-spacing: 0.5px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.nav-links a {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.nav-links a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+}
+
+.nav-links button {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--white);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.nav-links button:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .navbar { padding: 0 15px; }
+  .logo { font-size: 1.2rem; }
+  .nav-links { gap: 10px; }
+  .nav-links a { font-size: 0.85rem; padding: 6px 8px; }
+}

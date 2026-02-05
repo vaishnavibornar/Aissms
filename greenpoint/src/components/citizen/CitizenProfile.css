@@ -1,0 +1,154 @@
+/* Container for the whole page */
+.profile-container {
+  max-width: 600px; /* Narrower width for profile focus */
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
+
+/* --- Personal Profile Card --- */
+.profile-card {
+  text-align: center;
+  padding: 30px 20px;
+  margin-bottom: 30px;
+  border-top: 5px solid var(--primary); /* Accent border at top */
+}
+
+.profile-header {
+  margin-bottom: 25px;
+}
+
+.profile-header h2 {
+  margin: 10px 0 5px;
+  color: var(--primary-dark);
+  font-size: 1.8rem;
+}
+
+.email-text {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+/* Avatar Circle */
+.avatar-circle {
+  width: 90px;
+  height: 90px;
+  background: linear-gradient(135deg, var(--primary) 0%, #40916c 100%);
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  box-shadow: 0 4px 10px rgba(45, 106, 79, 0.3);
+  border: 4px solid #fff;
+}
+
+/* Stats Row (Points & Join Date) */
+.stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.stat-pill {
+  background: var(--bg-light);
+  padding: 10px 20px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.stat-pill .icon { font-size: 1.2rem; }
+.stat-pill .value { font-weight: 700; color: var(--text-main); font-size: 1.1rem; }
+.stat-pill .label { font-size: 0.85rem; color: var(--text-light); text-transform: uppercase; font-weight: 600; }
+
+/* --- Leaderboard Section --- */
+.leaderboard-section h3 {
+  text-align: center;
+  margin-bottom: 5px;
+  font-size: 1.5rem;
+}
+
+.leaderboard-section .subtitle {
+  text-align: center;
+  color: var(--text-light);
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+.leaderboard-list {
+  padding: 0;
+  overflow: hidden; /* Contains children border radius */
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+}
+
+.leaderboard-item:last-child {
+  border-bottom: none;
+}
+
+/* Highlight current user in the list */
+.leaderboard-item.highlight {
+  background-color: var(--secondary);
+  border-left: 4px solid var(--primary);
+}
+
+/* Ranking Column */
+.rank {
+  font-size: 1.2rem;
+  font-weight: 700;
+  width: 50px;
+  text-align: center;
+}
+
+/* User Info Column */
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-info strong {
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+.top-badge {
+  font-size: 0.75rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Points Column */
+.user-points {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: #f0fdf4;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+/* Special Rank Colors (Gold, Silver, Bronze) handled in JSX logic mostly, 
+   but we can add subtle row highlights here */
+.rank-1 { background-color: rgba(255, 215, 0, 0.05); }
+.rank-2 { background-color: rgba(192, 192, 192, 0.05); }
+.rank-3 { background-color: rgba(205, 127, 50, 0.05); }
+
+.empty-state {
+  padding: 30px;
+  text-align: center;
+  color: var(--text-light);
+  font-style: italic;
+}
