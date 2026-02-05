@@ -69,7 +69,7 @@ export default function CitizenDashboard() {
                 <span className={`badge ${item.status}`}>{item.status}</span>
               </div>
               <div className="history-meta">
-                <span>{new Date(item.createdAt?.seconds * 1000).toLocaleDateString()}</span>
+                <span>{item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}</span>
                 <span>👍 {item.upvotes}</span>
               </div>
             </div>

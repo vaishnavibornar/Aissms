@@ -1,29 +1,22 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Login from './components/auth/Login';
-import SignUp from './components/auth/SignUp';
+import LandingPage from './components/layout/LandingPage';
+import Auth from './components/auth/Auth';
 import RaiseComplaint from './components/citizen/RaiseComplaint';
 import CommunityFeed from './components/citizen/CommunityFeed';
+import CitizenDashboard from './components/citizen/CitizenDashboard';
 import AdminDashboard from './components/admin/AdminDashboard';
+import ProtectedRoute from './components/common/ProtectedRoute';
 import './App.css';
 
-// Component to protect routes based on auth and role
-const ProtectedRoute = ({ children, requiredRole }) => {
-  const { currentUser, userRole, loading } = useAuth();
-
-  if (loading) return <div>Loading...</div>;
-  if (!currentUser) return <Navigate to="/login" />;
-  if (requiredRole && userRole !== requiredRole) {
-    return <Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} />;
-  }
-
-  return children;
-};
-
-// Simple Layout wrapper for Navigation
+// Simple Layout wrapper to hide Navbar on Landing/Auth pages
 const Layout = ({ children }) => {
   const { currentUser, userRole } = useAuth();
+  
+  // Don't show navbar if not logged in
+  if (!currentUser) return children;
+
   return (
     <>
       <nav className="navbar">
@@ -33,9 +26,10 @@ const Layout = ({ children }) => {
             <>
               <a href="/dashboard">Feed</a>
               <a href="/raise">Report</a>
+              <a href="/profile">Profile</a>
             </>
           )}
-          {currentUser && <button onClick={() => auth.signOut()}>Logout</button>}
+          <button onClick={() => window.location.reload()}>Logout</button>
         </div>
       </nav>
       {children}
@@ -48,18 +42,29 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Auth />} />
           
+          {/* 👇 THIS IS THE MISSING LINE CAUSING THE BLANK PAGE 👇 */}
+          <Route path="/signup" element={<Auth />} />
+
+          {/* Protected Routes */}
           <Route path="/dashboard" element={
             <ProtectedRoute requiredRole="citizen">
               <Layout><CommunityFeed /></Layout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/raise" element={
             <ProtectedRoute requiredRole="citizen">
               <Layout><RaiseComplaint /></Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/profile" element={
+            <ProtectedRoute requiredRole="citizen">
+              <Layout><CitizenDashboard /></Layout>
             </ProtectedRoute>
           } />
           
@@ -69,7 +74,8 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="/" element={<Navigate to="/login" />} />
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
     </AuthProvider>
