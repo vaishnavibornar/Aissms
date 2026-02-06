@@ -5,127 +5,86 @@ import './LandingPage.css';
 export default function LandingPage() {
   const navigate = useNavigate();
 
+  // Smart Navigation: Sends user to Signup with Role pre-selected
+  const handleRoleSelect = (role) => {
+    // Ideally, pass this state to your Auth component via location state
+    // For now, we direct them to signup
+    navigate('/signup'); 
+  };
+
   return (
     <div className="landing-container">
-      {/* Navbar */}
+      {/* Floating Glass Navbar */}
       <nav className="landing-nav">
-        <div className="logo">
-          🌱 GreenPoints
+        <div className="logo">⚡ GreenPoints</div>
+        <div className="nav-links">
+          <a href="#" className="nav-link">Features</a>
+          <a href="#" className="nav-link">How it Works</a>
+          <a href="#" className="nav-link">Community</a>
         </div>
-        <div className="nav-buttons">
-          <button onClick={() => navigate('/login')} className="btn-login">Login</button>
-          <button onClick={() => navigate('/signup')} className="btn-signup">Get Started</button>
-        </div>
+        <button onClick={() => navigate('/login')} className="nav-cta">
+          Login
+        </button>
       </nav>
 
       {/* Hero Section */}
-      <header className="hero">
-        <h1>Build a Cleaner Future, <br /><span className="highlight">Together</span></h1>
+      <section className="hero">
+        <span className="hero-pill">🚀 #1 Environmental App in India</span>
+        <h1>
+          Report Issues. <br />
+          <span className="highlight">Get Rewards.</span>
+        </h1>
         <p>
-          Report environmental issues, rally community support, and watch as your 
-          neighborhood transforms. Every voice matters in the journey to a greener tomorrow.
+          The next-gen platform where technology meets civic duty. 
+          Snap a photo, earn GreenPoints, and watch your city transform.
         </p>
-        
-        <div className="hero-actions">
-          <button onClick={() => navigate('/signup')} className="btn-primary">Start Making Change</button>
-          <button onClick={() => navigate('/login')} className="btn-secondary">Login to Your Account</button>
-        </div>
 
-        <div className="stats-row">
-          <div className="stat-item">
-            <h3>10K+</h3>
-            <p>Issues Reported</p>
+        {/* The Role Selection Cards (User Request) */}
+        <div className="role-cards-container">
+          
+          <div className="role-card" onClick={() => handleRoleSelect('citizen')}>
+            <span className="role-icon">🌿</span>
+            <h3>Join as Citizen</h3>
+            <p>Report issues, earn points, and climb the leaderboard.</p>
+            <span className="role-arrow">Get Started →</span>
           </div>
-          <div className="stat-item">
-            <h3>95%</h3>
-            <p>Resolution Rate</p>
-          </div>
-          <div className="stat-item">
-            <h3>500+</h3>
-            <p>Green Cities</p>
-          </div>
-        </div>
-      </header>
 
-      {/* Features Grid */}
-      <section className="features">
-        <h2 className="section-title">Everything You Need to Make a Difference</h2>
-        <p className="section-subtitle">Our platform provides all the tools for citizens and administrators to collaborate on environmental improvements.</p>
-        
-        <div className="features-grid">
-          <FeatureCard 
-            icon="📱" 
-            title="Easy Reporting" 
-            desc="Capture issues instantly with your camera and auto-location detection." 
-          />
-          <FeatureCard 
-            icon="📍" 
-            title="Location-Based" 
-            desc="Auto-detect exact locations for accurate reporting and rapid organization." 
-          />
-          <FeatureCard 
-            icon="👍" 
-            title="Community Voting" 
-            desc="Upvote issues that matter most to prioritize urgent environmental problems." 
-          />
-          <FeatureCard 
-            icon="📊" 
-            title="Priority System" 
-            desc="Higher voted complaints get faster attention from authorities." 
-          />
-          <FeatureCard 
-            icon="🔒" 
-            title="Anonymous Option" 
-            desc="Report sensitive issues anonymously while still contributing to change." 
-          />
-          <FeatureCard 
-            icon="🏆" 
-            title="Community Points" 
-            desc="Earn points for active participation and climb the leaderboard." 
-          />
+          <div className="role-card" onClick={() => handleRoleSelect('admin')}>
+            <span className="role-icon">🛡️</span>
+            <h3>Join as Admin</h3>
+            <p>Manage complaints, assign tasks, and resolve issues.</p>
+            <span className="role-arrow">Access Dashboard →</span>
+          </div>
+
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="how-it-works">
-        <h2 className="section-title">How GreenPoints Works</h2>
-        <p className="section-subtitle">From spotting an issue to seeing it resolved — your path to community impact.</p>
-
-        <div className="steps-grid">
-          <StepCard number="01" title="Spot an Issue" desc="See an environmental or civic problem in your area? Take a photo." />
-          <StepCard number="02" title="Capture & Report" desc="Add details and submit your complaint with location data." />
-          <StepCard number="03" title="Community Support" desc="Your neighbors upvote important issues, boosting priority." />
-          <StepCard number="04" title="Resolution" desc="Administrators assign and resolve complaints. You earn points!" />
+      {/* Bento Grid Features */}
+      <section className="bento-section">
+        <div className="bento-grid">
+          <div className="bento-item bento-large">
+            <h3>📸 Smart AI Camera</h3>
+            <p>Instantly detects location and categorizes waste using advanced AI vision.</p>
+          </div>
+          <div className="bento-item">
+            <h3>📍 Geo-Tagging</h3>
+            <p>Precise coordinates for every complaint.</p>
+          </div>
+          <div className="bento-item bento-tall">
+            <h3>🏆 Leaderboard</h3>
+            <p>Compete with neighbors. Top contributors win monthly rewards.</p>
+          </div>
+          <div className="bento-item">
+            <h3>🔒 Secure & Anon</h3>
+            <p>Your data is encrypted. Report anonymously.</p>
+          </div>
+          <div className="bento-item">
+            <h3>⚡ Fast Resolution</h3>
+            <p>Direct line to municipal authorities.</p>
+          </div>
         </div>
       </section>
 
-      {/* Footer CTA */}
-      <footer className="cta-footer">
-        <h2>Ready to Transform Your Community?</h2>
-        <p>Join thousands of citizens who are actively shaping cleaner, safer, and more beautiful neighborhoods.</p>
-        <button onClick={() => navigate('/signup')} className="btn-white">Get Started Now →</button>
-      </footer>
-    </div>
-  );
-}
-
-// Helper Components for Cleaner Code
-function FeatureCard({ icon, title, desc }) {
-  return (
-    <div className="feature-card">
-      <div className="icon-box">{icon}</div>
-      <h3>{title}</h3>
-      <p style={{ color: '#666', lineHeight: '1.6', marginTop: '0.5rem' }}>{desc}</p>
-    </div>
-  );
-}
-
-function StepCard({ number, title, desc }) {
-  return (
-    <div className="step-card">
-      <div className="step-number">{number}</div>
-      <h3>{title}</h3>
-      <p style={{ color: '#666', lineHeight: '1.6', marginTop: '0.5rem' }}>{desc}</p>
     </div>
   );
 }
