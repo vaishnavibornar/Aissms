@@ -1,81 +1,196 @@
-import React, { useEffect, useState } from "react";
-import { db, auth } from "../../services/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import "./CitizenDashboard.css";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { collection, query, where, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
+import { useAuth } from '../../contexts/AuthContext';
+import './CitizenDashboard.css';
 
 export default function CitizenDashboard() {
-  const [myComplaints, setMyComplaints] = useState([]);
-  const [stats, setStats] = useState({ total: 0, resolved: 0, pending: 0 });
+  const { currentUser, logout } = useAuth();
+  const [complaints, setComplaints] = useState([]);
+  const [userStats, setUserStats] = useState({ points: 0, complaintsRaised: 0 });
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!currentUser) return;
 
-    // Query only complaints created by this user
+    // Fetch user stats
+    const fetchUserStats = async () => {
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (userDoc.exists()) {
+        setUserStats({
+          points: userDoc.data().points || 0,
+          complaintsRaised: userDoc.data().complaintsRaised || 0
+        });
+      }
+    };
+
+    fetchUserStats();
+
+    // Real-time listener for user's complaints
     const q = query(
-      collection(db, "complaints"), 
-      where("userId", "==", auth.currentUser.uid)
+      collection(db, 'complaints'),
+      where('userId', '==', currentUser.uid),
+      orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMyComplaints(data);
-      
-      // Calculate stats locally
-      setStats({
-        total: data.length,
-        resolved: data.filter(c => c.status === 'resolved').length,
-        pending: data.filter(c => c.status === 'pending').length
+      const complaintsData = [];
+      snapshot.forEach((doc) => {
+        complaintsData.push({ id: doc.id, ...doc.data() });
       });
+      setComplaints(complaintsData);
+      setLoading(false);
     });
 
-    return unsubscribe;
-  }, []);
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to log out:', error);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: '#f59e0b',
+      approved: '#3b82f6',
+      assigned: '#8b5cf6',
+      resolved: '#10b981',
+      rejected: '#ef4444'
+    };
+    return colors[status] || '#6b7280';
+  };
+
+  const getPriorityLabel = (upvotes) => {
+    if (upvotes >= 50) return 'Critical';
+    if (upvotes >= 20) return 'High';
+    if (upvotes >= 10) return 'Medium';
+    return 'Low';
+  };
 
   return (
-    <div className="container dashboard-container">
-      <div className="welcome-banner">
-        <h1>Hello, {auth.currentUser?.displayName || "Citizen"} 👋</h1>
-        <p>Here is the impact you've made in your community.</p>
-      </div>
+    <div className="dashboard-container">
+      <nav className="dashboard-nav">
+        <div className="nav-brand">
+          <h2>🌱 GreenPoints</h2>
+        </div>
+        <div className="nav-links">
+          <button onClick={() => navigate('/citizen/dashboard')} className="nav-link active">
+            Dashboard
+          </button>
+          <button onClick={() => navigate('/citizen/feed')} className="nav-link">
+            Community Feed
+          </button>
+          <button onClick={() => navigate('/citizen/raise-complaint')} className="nav-link">
+            Raise Complaint
+          </button>
+          <button onClick={() => navigate('/citizen/profile')} className="nav-link">
+            Profile
+          </button>
+          <button onClick={() => navigate('/citizen/emergency')} className="nav-link">
+            Emergency
+          </button>
+          <button onClick={handleLogout} className="nav-link logout">
+            Logout
+          </button>
+        </div>
+      </nav>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <h3>{stats.total}</h3>
-          <span>Total Issues</span>
+      <div className="dashboard-content">
+        <div className="dashboard-header">
+          <h1>Citizen Dashboard</h1>
+          <p>Welcome back! Track your contributions and community impact.</p>
         </div>
-        <div className="stat-card success">
-          <h3>{stats.resolved}</h3>
-          <span>Resolved</span>
-        </div>
-        <div className="stat-card warning">
-          <h3>{stats.pending}</h3>
-          <span>Pending</span>
-        </div>
-      </div>
 
-      <h2>My History</h2>
-      {myComplaints.length === 0 ? (
-        <div className="empty-state">
-          <p>You haven't reported any issues yet.</p>
-          <a href="/raise" className="btn-primary">Raise your first complaint</a>
-        </div>
-      ) : (
-        <div className="history-list">
-          {myComplaints.map(item => (
-            <div key={item.id} className="history-item">
-              <img src={item.imageUrl} alt="Thumbnail" />
-              <div className="history-details">
-                <h4>{item.title}</h4>
-                <span className={`badge ${item.status}`}>{item.status}</span>
-              </div>
-              <div className="history-meta">
-                <span>{item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}</span>
-                <span>👍 {item.upvotes}</span>
-              </div>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon">🎯</div>
+            <div className="stat-info">
+              <h3>{userStats.points}</h3>
+              <p>Total Points</p>
             </div>
-          ))}
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">📋</div>
+            <div className="stat-info">
+              <h3>{userStats.complaintsRaised}</h3>
+              <p>Complaints Raised</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">✅</div>
+            <div className="stat-info">
+              <h3>{complaints.filter(c => c.status === 'resolved').length}</h3>
+              <p>Resolved</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">⏳</div>
+            <div className="stat-info">
+              <h3>{complaints.filter(c => c.status === 'pending').length}</h3>
+              <p>Pending</p>
+            </div>
+          </div>
         </div>
-      )}
+
+        <div className="complaints-section">
+          <h2>My Complaints</h2>
+          
+          {loading ? (
+            <div className="loading">Loading your complaints...</div>
+          ) : complaints.length === 0 ? (
+            <div className="empty-state">
+              <p>You haven't raised any complaints yet.</p>
+              <button 
+                onClick={() => navigate('/citizen/raise-complaint')}
+                className="primary-button"
+              >
+                Raise Your First Complaint
+              </button>
+            </div>
+          ) : (
+            <div className="complaints-list">
+              {complaints.map((complaint) => (
+                <div key={complaint.id} className="complaint-card">
+                  <div className="complaint-header">
+                    <h3>{complaint.title}</h3>
+                    <span 
+                      className="status-badge" 
+                      style={{ backgroundColor: getStatusColor(complaint.status) }}
+                    >
+                      {complaint.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="complaint-description">{complaint.description}</p>
+                  <div className="complaint-meta">
+                    <span>📍 {complaint.region}</span>
+                    <span>👍 {complaint.upvotes || 0} upvotes</span>
+                    <span className="priority-badge">
+                      Priority: {getPriorityLabel(complaint.upvotes || 0)}
+                    </span>
+                  </div>
+                  {complaint.imageUrl && (
+                    <img 
+                      src={complaint.imageUrl} 
+                      alt="Complaint" 
+                      className="complaint-image"
+                    />
+                  )}
+                  <div className="complaint-footer">
+                    <small>Created: {new Date(complaint.createdAt).toLocaleDateString()}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

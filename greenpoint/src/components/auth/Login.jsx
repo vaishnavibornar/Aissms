@@ -1,37 +1,85 @@
-import React, { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../services/firebase";
-import { useNavigate, Link } from "react-router-dom";
-import "./Auth.css"; // Assume basic flex styling provided in logic
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import './Auth.css';
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login, userRole } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Navigation happens in App.jsx based on role protection
-      navigate("/dashboard"); 
-    } catch (err) {
-      setError("Failed to log in: " + err.message);
+
+    if (!email || !password) {
+      return setError('Please fill in all fields');
     }
-  };
+
+    try {
+      setError('');
+      setLoading(true);
+      await login(email, password);
+      
+      // Redirect based on role
+      if (userRole === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/citizen/dashboard');
+      }
+    } catch (err) {
+      setError('Failed to log in. Please check your credentials.');
+      console.error(err);
+    }
+    
+    setLoading(false);
+  }
 
   return (
     <div className="auth-container">
-      <div className="card auth-card">
-        <h2>GreenPoints Login</h2>
-        {error && <div className="error-alert">{error}</div>}
-        <form onSubmit={handleLogin}>
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <button type="submit" className="btn-primary full-width">Log In</button>
+      <div className="auth-card">
+        <div className="auth-header">
+          <h1 className="auth-title">Welcome Back</h1>
+          <p className="auth-subtitle">Sign in to continue to GreenPoints</p>
+        </div>
+
+        {error && <div className="error-message">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="email">Email Address</label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          <button type="submit" disabled={loading} className="auth-button">
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
         </form>
-        <p>Need an account? <Link to="/signup">Sign Up</Link></p>
+
+        <div className="auth-footer">
+          <p>Don't have an account? <Link to="/signup">Sign Up</Link></p>
+        </div>
       </div>
     </div>
   );

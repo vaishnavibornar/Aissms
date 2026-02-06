@@ -1,131 +1,212 @@
-import React, { useEffect, useState } from "react";
-import { db, auth } from "../../services/firebase";
-import { 
-  doc, 
-  getDoc, 
-  collection, 
-  query, 
-  orderBy, 
-  limit, 
-  getDocs 
-} from "firebase/firestore";
-import "./CitizenProfile.css";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { db } from '../../services/firebase';
+import { useAuth } from '../../contexts/AuthContext';
+import './CitizenProfile.css';
 
 export default function CitizenProfile() {
-  const [profile, setProfile] = useState(null);
+  const { currentUser, logout } = useAuth();
+  const [userData, setUserData] = useState(null);
+  const [complaints, setComplaints] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    if (!currentUser) return;
+
     const fetchData = async () => {
       try {
-        // 1. Get Current User Data
-        const user = auth.currentUser;
-        if (user) {
-          const userDocRef = doc(db, "users", user.uid);
-          const userSnap = await getDoc(userDocRef);
-          
-          if (userSnap.exists()) {
-            setProfile(userSnap.data());
-          }
+        // Fetch user data
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          setUserData({ id: userDoc.id, ...userDoc.data() });
         }
 
-        // 2. Get Global Leaderboard (Top 10 Users)
+        // Fetch user's complaints
+        const complaintsQuery = query(
+          collection(db, 'complaints'),
+          where('userId', '==', currentUser.uid)
+        );
+        const complaintsSnapshot = await getDocs(complaintsQuery);
+        const complaintsData = [];
+        complaintsSnapshot.forEach((doc) => {
+          complaintsData.push({ id: doc.id, ...doc.data() });
+        });
+        setComplaints(complaintsData);
+
+        // Fetch leaderboard (top 10 users)
         const leaderboardQuery = query(
-          collection(db, "users"), 
-          orderBy("points", "desc"), 
+          collection(db, 'users'),
+          where('role', '==', 'citizen'),
+          orderBy('points', 'desc'),
           limit(10)
         );
-        
-        const querySnapshot = await getDocs(leaderboardQuery);
-        const topUsers = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const leaderboardSnapshot = await getDocs(leaderboardQuery);
+        const leaderboardData = [];
+        leaderboardSnapshot.forEach((doc) => {
+          leaderboardData.push({ id: doc.id, ...doc.data() });
+        });
+        setLeaderboard(leaderboardData);
 
-        setLeaderboard(topUsers);
+        setLoading(false);
       } catch (error) {
-        console.error("Error loading profile data:", error);
-      } finally {
+        console.error('Error fetching profile data:', error);
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [currentUser]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to log out:', error);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: '#f59e0b',
+      approved: '#3b82f6',
+      assigned: '#8b5cf6',
+      resolved: '#10b981',
+      rejected: '#ef4444'
+    };
+    return colors[status] || '#6b7280';
+  };
 
   if (loading) {
     return (
-      <div className="container" style={{textAlign: 'center', marginTop: '50px'}}>
-        Loading profile...
+      <div className="dashboard-container">
+        <div className="loading">Loading profile...</div>
       </div>
     );
   }
 
   return (
-    <div className="container profile-container">
-      
-      {/* --- Personal Profile Section --- */}
-      {profile && (
-        <div className="card profile-card">
-          <div className="profile-header">
-            <div className="avatar-circle">
-              {profile.username ? profile.username.charAt(0).toUpperCase() : "U"}
-            </div>
-            <h2>{profile.username || "Citizen"}</h2>
-            <p className="email-text">{profile.email}</p>
-          </div>
-          
-          <div className="stats-row">
-            <div className="stat-pill">
-              <span className="icon">⭐</span>
-              <span className="value">{profile.points || 0}</span>
-              <span className="label">Points</span>
-            </div>
-            <div className="stat-pill">
-              <span className="icon">🗓️</span>
-              <span className="value">
-                {profile.createdAt ? new Date(profile.createdAt.seconds * 1000).getFullYear() : "2024"}
-              </span>
-              <span className="label">Joined</span>
-            </div>
-          </div>
+    <div className="dashboard-container">
+      <nav className="dashboard-nav">
+        <div className="nav-brand">
+          <h2>🌱 GreenPoints</h2>
         </div>
-      )}
+        <div className="nav-links">
+          <button onClick={() => navigate('/citizen/dashboard')} className="nav-link">
+            Dashboard
+          </button>
+          <button onClick={() => navigate('/citizen/feed')} className="nav-link">
+            Community Feed
+          </button>
+          <button onClick={() => navigate('/citizen/raise-complaint')} className="nav-link">
+            Raise Complaint
+          </button>
+          <button onClick={() => navigate('/citizen/profile')} className="nav-link active">
+            Profile
+          </button>
+          <button onClick={() => navigate('/citizen/emergency')} className="nav-link">
+            Emergency
+          </button>
+          <button onClick={handleLogout} className="nav-link logout">
+            Logout
+          </button>
+        </div>
+      </nav>
 
-      {/* --- Leaderboard Section --- */}
-      <div className="leaderboard-section">
-        <h3>🏆 Community Champions</h3>
-        <p className="subtitle">Top contributors making a difference</p>
-        
-        <div className="leaderboard-list card">
-          {leaderboard.length > 0 ? (
-            leaderboard.map((user, index) => {
-              const isCurrentUser = auth.currentUser && user.id === auth.currentUser.uid;
-              
-              return (
-                <div 
-                  key={user.id} 
-                  className={`leaderboard-item rank-${index + 1} ${isCurrentUser ? 'highlight' : ''}`}
-                >
-                  <div className="rank">
-                    {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`}
-                  </div>
-                  
-                  <div className="user-info">
-                    <strong>{user.username}</strong>
-                    {index < 3 && <span className="top-badge">Top Contributor</span>}
-                  </div>
-                  
-                  <div className="user-points">
-                    {user.points} pts
-                  </div>
+      <div className="dashboard-content">
+        <div className="profile-container">
+          <div className="profile-header">
+            <div className="profile-avatar">
+              {userData?.username?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <div className="profile-info">
+              <h1>{userData?.username || 'User'}</h1>
+              <p>{userData?.email || ''}</p>
+              <div className="profile-stats">
+                <div className="profile-stat">
+                  <span className="stat-value">{userData?.points || 0}</span>
+                  <span className="stat-label">Points</span>
                 </div>
-              );
-            })
-          ) : (
-            <div className="empty-state">No points recorded yet. Be the first!</div>
-          )}
+                <div className="profile-stat">
+                  <span className="stat-value">{userData?.complaintsRaised || 0}</span>
+                  <span className="stat-label">Complaints</span>
+                </div>
+                <div className="profile-stat">
+                  <span className="stat-value">
+                    {complaints.filter(c => c.status === 'resolved').length}
+                  </span>
+                  <span className="stat-label">Resolved</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="profile-sections">
+            <div className="profile-section">
+              <h2>My Complaints History</h2>
+              {complaints.length === 0 ? (
+                <p className="empty-message">No complaints raised yet.</p>
+              ) : (
+                <div className="complaints-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Upvotes</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {complaints.map((complaint) => (
+                        <tr key={complaint.id}>
+                          <td>{complaint.title}</td>
+                          <td>
+                            <span 
+                              className="status-badge-small"
+                              style={{ backgroundColor: getStatusColor(complaint.status) }}
+                            >
+                              {complaint.status}
+                            </span>
+                          </td>
+                          <td>{complaint.upvotes || 0}</td>
+                          <td>{new Date(complaint.createdAt).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="profile-section">
+              <h2>Community Leaderboard</h2>
+              <div className="leaderboard">
+                {leaderboard.map((user, index) => (
+                  <div 
+                    key={user.id} 
+                    className={`leaderboard-item ${user.id === currentUser.uid ? 'current-user' : ''}`}
+                  >
+                    <div className="leaderboard-rank">
+                      {index === 0 && '🥇'}
+                      {index === 1 && '🥈'}
+                      {index === 2 && '🥉'}
+                      {index > 2 && `#${index + 1}`}
+                    </div>
+                    <div className="leaderboard-info">
+                      <span className="leaderboard-name">{user.username}</span>
+                      <span className="leaderboard-stats">
+                        {user.points} points · {user.complaintsRaised} complaints
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
