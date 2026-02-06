@@ -122,6 +122,10 @@ export default function RaiseComplaint() {
     });
   };
 
+  const toggleAnonymous = () => {
+    setFormData(prev => ({ ...prev, anonymous: !prev.anonymous }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!image) return setError('Please capture a photo.');
@@ -139,16 +143,15 @@ export default function RaiseComplaint() {
       id: Date.now().toString(),
       title: formData.title,
       description: formData.description,
-      // Instead of uploading, we use the local preview URL
       imageUrl: imagePreview, 
       region: location.region,
-      userId: currentUser?.uid || 'demo-user',
+      userId: formData.anonymous ? null : (currentUser?.uid || 'demo-user'),
+      anonymous: formData.anonymous,
       status: 'pending',
       upvotes: 0,
       createdAt: new Date().toISOString()
     };
 
-    // 3. Save to Local Browser Memory (mock database)
     const existingComplaints = JSON.parse(localStorage.getItem('local_complaints') || '[]');
     localStorage.setItem('local_complaints', JSON.stringify([newComplaint, ...existingComplaints]));
 
@@ -182,30 +185,56 @@ export default function RaiseComplaint() {
           <form onSubmit={handleSubmit} className="complaint-form">
             <div className="form-group">
               <label>Complaint Title</label>
-              <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Brief title" required />
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="Brief title"
+                required
+              />
             </div>
 
             <div className="form-group">
               <label>Description</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Describe the issue..." rows="5" required />
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Describe the issue..."
+                rows="5"
+                required
+              />
             </div>
 
             <div className="form-group">
               <label>Capture Photo</label>
               {!cameraActive && !imagePreview && (
-                <button type="button" onClick={startCamera} className="camera-button">📷 Open Camera</button>
+                <button type="button" onClick={startCamera} className="camera-button">
+                  📷 Open Camera
+                </button>
               )}
               {cameraActive && (
                 <div className="camera-container">
                   <video ref={videoRef} autoPlay playsInline muted />
-                  <button type="button" onClick={capturePhoto} className="capture-button">Capture Photo</button>
-                  <button type="button" onClick={stopCamera} className="cancel-button">Cancel</button>
+                  <button type="button" onClick={capturePhoto} className="capture-button">
+                    Capture Photo
+                  </button>
+                  <button type="button" onClick={stopCamera} className="cancel-button">
+                    Cancel
+                  </button>
                 </div>
               )}
               {imagePreview && (
                 <div className="image-preview-container">
                   <img src={imagePreview} alt="Preview" className="image-preview" />
-                  <button type="button" onClick={() => { setImage(null); setImagePreview(null); }} className="remove-button">Remove & Retake</button>
+                  <button
+                    type="button"
+                    onClick={() => { setImage(null); setImagePreview(null); }}
+                    className="remove-button"
+                  >
+                    Remove & Retake
+                  </button>
                 </div>
               )}
               <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -214,13 +243,43 @@ export default function RaiseComplaint() {
             <div className="form-group">
               <label>Location</label>
               {!location ? (
-                <button type="button" onClick={getLocation} className="location-button">📍 Get Location</button>
+                <button type="button" onClick={getLocation} className="location-button">
+                  📍 Get Location
+                </button>
               ) : (
-                <div className="location-display"><span>✅ {location.region}</span></div>
+                <div className="location-display">
+                  <span>✅ {location.region}</span>
+                </div>
               )}
             </div>
 
-            <button type="submit" disabled={loading || !image || !location} className="submit-button">
+            {/* Anonymous reporting toggle (glass switch) */}
+            <div className="form-group">
+              <div className="anonymous-toggle-row">
+                <div className="anonymous-toggle-text">
+                  <span className="anonymous-toggle-label">Submit as Anonymous</span>
+                  <span className="anonymous-toggle-helper">
+                    When enabled, your name will be hidden on the public feed.
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  className={`glass-toggle ${formData.anonymous ? 'on' : ''}`}
+                  role="switch"
+                  aria-checked={formData.anonymous}
+                  onClick={toggleAnonymous}
+                >
+                  <span className="glass-toggle-knob" />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !image || !location}
+              className="submit-button"
+            >
               {loading ? 'Simulating Upload...' : 'Submit Complaint (Demo)'}
             </button>
           </form>
