@@ -2,9 +2,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
+// Layout Components
+import LandingPage from './components/layout/LandingPage'; // 👈 Import the Landing Page
+
 // Auth Components
-import Login from './components/auth/Login';
-import SignUp from './components/auth/SignUp';
 import Auth from './components/auth/Auth';
 
 // Citizen Components
@@ -26,6 +27,9 @@ function App() {
       <AuthProvider>
         <Routes>
           {/* Public Routes */}
+          {/* 👇 Change the root path to show LandingPage */}
+          <Route path="/" element={<LandingPage />} /> 
+          
           <Route path="/login" element={<Auth />} />
           <Route path="/signup" element={<Auth />} />
           
@@ -89,9 +93,8 @@ function App() {
             } 
           />
           
-          {/* Default Route */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Fallback Route - Redirect unknown URLs to Home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </Router>
