@@ -1,221 +1,285 @@
-import React, { useState, useEffect } from "react";
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  updateProfile 
-} from "firebase/auth";
-import { auth, db } from "../../services/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { useNavigate, useLocation } from "react-router-dom";
-import "./Auth.css";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import './Auth.css';
 
 export default function Auth() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Determine mode based on URL path or default to login
   const [isLogin, setIsLogin] = useState(true);
-  
-  useEffect(() => {
-    if (location.pathname === '/signup') {
-      setIsLogin(false);
-    } else {
-      setIsLogin(true);
-    }
-  }, [location]);
+  const [userRole, setUserRole] = useState('citizen');
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login, signup } = useAuth();
+  const navigate = useNavigate();
 
-  const toggleMode = () => {
-    if (isLogin) navigate('/signup');
-    else navigate('/login');
+  const handleRoleSwitch = (role) => {
+    setUserRole(role);
+    setError('');
   };
 
-  // Form State
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [role, setRole] = useState("citizen"); // Default role
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    region: "",
-    password: ""
-  });
+  const handleModeSwitch = () => {
+    setIsLogin(!isLogin);
+    setError('');
+    setFormData({
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: ''
+    });
+  };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setError('');
+
+    if (!formData.email || !formData.password) {
+      return setError('Please fill in all required fields');
+    }
+
+    if (!isLogin) {
+      if (!formData.username) {
+        return setError('Username is required');
+      }
+      if (formData.password !== formData.confirmPassword) {
+        return setError('Passwords do not match');
+      }
+      if (formData.password.length < 6) {
+        return setError('Password must be at least 6 characters');
+      }
+    }
 
     try {
+      setLoading(true);
+      
       if (isLogin) {
-        // --- LOGIN ---
-        await signInWithEmailAndPassword(auth, formData.email, formData.password);
-        // Navigation is handled by ProtectedRoute or here manually
-        // For simplicity, we can let AuthContext detect change, 
-        // but explicit nav is safer for UX feedback
-        navigate("/dashboard"); 
+        await login(formData.email, formData.password);
       } else {
-        // --- SIGN UP ---
-        const { user } = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        await updateProfile(user, { displayName: formData.fullName });
-        
-        await setDoc(doc(db, "users", user.uid), {
-          username: formData.fullName,
-          email: formData.email,
-          region: formData.region, // Added region field
-          role: role,
-          points: 0,
-          createdAt: serverTimestamp(),
-        });
-        
-        navigate(role === 'admin' ? "/admin" : "/dashboard");
+        await signup(formData.email, formData.password, userRole, formData.username);
+      }
+
+      // Navigate based on role
+      if (userRole === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/citizen/dashboard');
       }
     } catch (err) {
+      if (isLogin) {
+        setError('Invalid email or password. Please try again.');
+      } else {
+        setError('Failed to create account. Email may already be in use.');
+      }
       console.error(err);
-      setError("Authentication failed. Please check your details.");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Render Components ---
-
-  const GreenSidePanel = ({ title, subtitle }) => (
-    <div className="auth-panel-green">
-      <div className="green-content">
-        <div className="leaf-logo-large">🍃</div>
-        <h2>{title}</h2>
-        <p>{subtitle}</p>
-      </div>
-    </div>
-  );
-
   return (
-    <div className={`auth-split-wrapper ${isLogin ? 'mode-signin' : 'mode-signup'}`}>
-      
-      {/* --- SIGN UP LAYOUT: Green Left, Form Right --- */}
-      {!isLogin && (
-        <>
-          <GreenSidePanel 
-            title="Join the Movement" 
-            subtitle="Become part of a community dedicated to environmental change. Your actions today shape a better tomorrow." 
-          />
-          <div className="auth-panel-form">
-            <div className="form-container">
-              <div className="auth-header">
-                <div className="mobile-logo">🍃 GreenPoints</div>
-                <h2>Create your account</h2>
-                <p>Start your journey towards a cleaner community</p>
+    <div className={`auth-page ${userRole}`}>
+      {/* Animated Background */}
+      <div className="auth-background">
+        <div className="background-overlay"></div>
+        <div className="floating-particles">
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="auth-container">
+        {/* Logo & Branding */}
+        <div className="auth-branding">
+          <div className="logo-container">
+            <div className="logo-icon">🌱</div>
+            <h1 className="brand-name">GreenPoints</h1>
+          </div>
+          <p className="brand-tagline">
+            {userRole === 'citizen' 
+              ? 'Join the movement for a cleaner, greener community' 
+              : 'Manage and resolve environmental issues efficiently'}
+          </p>
+        </div>
+
+        {/* Glass Card */}
+        <div className={`auth-glass-card ${isLogin ? 'login-mode' : 'signup-mode'}`}>
+          {/* Role Switcher */}
+          <div className="role-switcher">
+            <button
+              type="button"
+              className={`role-option ${userRole === 'citizen' ? 'active' : ''}`}
+              onClick={() => handleRoleSwitch('citizen')}
+            >
+              <div className="role-icon">👥</div>
+              <div className="role-info">
+                <span className="role-title">Citizen</span>
+                <span className="role-subtitle">Report & Support</span>
               </div>
+            </button>
+            
+            <div className="role-divider"></div>
+            
+            <button
+              type="button"
+              className={`role-option ${userRole === 'admin' ? 'active' : ''}`}
+              onClick={() => handleRoleSwitch('admin')}
+            >
+              <div className="role-icon">⚙️</div>
+              <div className="role-info">
+                <span className="role-title">Administrator</span>
+                <span className="role-subtitle">Manage & Resolve</span>
+              </div>
+            </button>
+            
+            <div className={`role-slider ${userRole}`}></div>
+          </div>
 
-              {/* Role Selection Cards */}
-              <div className="role-selector">
-                <p className="field-label">I am a</p>
-                <div className="role-cards">
-                  <div 
-                    className={`role-card ${role === 'citizen' ? 'selected' : ''}`}
-                    onClick={() => setRole('citizen')}
-                  >
-                    <span className="role-icon">👥</span>
-                    <div className="role-text">
-                      <strong>Citizen</strong>
-                      <span>Report & vote on issues</span>
-                    </div>
-                  </div>
-                  <div 
-                    className={`role-card ${role === 'admin' ? 'selected' : ''}`}
-                    onClick={() => setRole('admin')}
-                  >
-                    <span className="role-icon">🛡️</span>
-                    <div className="role-text">
-                      <strong>Administrator</strong>
-                      <span>Manage & assign complaints</span>
-                    </div>
-                  </div>
+          {/* Form Header */}
+          <div className="form-header">
+            <h2 className="form-title">
+              {isLogin ? 'Welcome Back' : 'Create Account'}
+            </h2>
+            <p className="form-subtitle">
+              {isLogin 
+                ? `Sign in to continue as ${userRole === 'citizen' ? 'Citizen' : 'Administrator'}` 
+                : `Join GreenPoints as ${userRole === 'citizen' ? 'a Citizen' : 'an Administrator'}`}
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="error-banner">
+              <span className="error-icon">⚠️</span>
+              <span className="error-text">{error}</span>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="auth-form">
+            {/* Username (Sign Up Only) */}
+            {!isLogin && (
+              <div className="form-field fade-in">
+                <label htmlFor="username">Username</label>
+                <div className="input-wrapper">
+                  <span className="input-icon">👤</span>
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    placeholder="Choose a unique username"
+                    required={!isLogin}
+                  />
                 </div>
               </div>
+            )}
 
-              {/* Sign Up Form */}
-              <form onSubmit={handleSubmit}>
-                <div className="input-group">
-                  <label>Full Name</label>
-                  <input type="text" name="fullName" placeholder="John Doe" value={formData.fullName} onChange={handleChange} required />
-                </div>
-                <div className="input-group">
-                  <label>Email</label>
-                  <input type="email" name="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
-                </div>
-                <div className="input-group">
-                  <label>Region / District</label>
-                  <input type="text" name="region" placeholder="Downtown District" value={formData.region} onChange={handleChange} required />
-                </div>
-                <div className="input-group">
-                  <label>Password</label>
-                  <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required />
-                  <span className="hint">Must be at least 8 characters</span>
-                </div>
-
-                {error && <div className="error-msg">{error}</div>}
-
-                <button type="submit" className="btn-auth-submit" disabled={loading}>
-                  {loading ? "Creating..." : "Create Account →"}
-                </button>
-              </form>
-
-              <div className="auth-footer-link">
-                Already have an account? <span onClick={toggleMode}>Sign in</span>
+            {/* Email */}
+            <div className="form-field">
+              <label htmlFor="email">Email Address</label>
+              <div className="input-wrapper">
+                <span className="input-icon">✉️</span>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="your@email.com"
+                  required
+                />
               </div>
             </div>
-          </div>
-        </>
-      )}
 
-      {/* --- SIGN IN LAYOUT: Form Left, Green Right --- */}
-      {isLogin && (
-        <>
-          <div className="auth-panel-form">
-            <div className="form-container">
-              <div className="auth-header">
-                <div className="brand-header">🍃 GreenPoints</div>
-                <h2>Welcome back</h2>
-                <p>Sign in to continue your environmental mission</p>
-              </div>
-
-              <form onSubmit={handleSubmit}>
-                <div className="input-group">
-                  <label>Email</label>
-                  <input type="email" name="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
-                </div>
-                <div className="input-group">
-                  <div className="label-row">
-                    <label>Password</label>
-                    <span className="forgot-link">Forgot password?</span>
-                  </div>
-                  <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required />
-                </div>
-
-                {error && <div className="error-msg">{error}</div>}
-
-                <button type="submit" className="btn-auth-submit" disabled={loading}>
-                  {loading ? "Signing In..." : "Sign In →"}
-                </button>
-              </form>
-
-              <div className="auth-footer-link">
-                Don't have an account? <span onClick={toggleMode}>Create account</span>
+            {/* Password */}
+            <div className="form-field">
+              <label htmlFor="password">Password</label>
+              <div className="input-wrapper">
+                <span className="input-icon">🔒</span>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder={isLogin ? "Enter your password" : "At least 6 characters"}
+                  required
+                />
               </div>
             </div>
-          </div>
-          <GreenSidePanel 
-            title="Your Voice Matters" 
-            subtitle="Every complaint raised brings us one step closer to a cleaner, greener community." 
-          />
-        </>
-      )}
 
+            {/* Confirm Password (Sign Up Only) */}
+            {!isLogin && (
+              <div className="form-field fade-in">
+                <label htmlFor="confirmPassword">Confirm Password</label>
+                <div className="input-wrapper">
+                  <span className="input-icon">🔑</span>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Re-enter your password"
+                    required={!isLogin}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className={`submit-button ${userRole}`}
+            >
+              {loading ? (
+                <span className="button-spinner"></span>
+              ) : (
+                <>
+                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+                  <span className="button-arrow">→</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Mode Toggle */}
+          <div className="mode-toggle">
+            <p>
+              {isLogin ? "Don't have an account?" : "Already have an account?"}
+            </p>
+            <button
+              type="button"
+              onClick={handleModeSwitch}
+              className="toggle-link"
+            >
+              {isLogin ? 'Sign Up' : 'Sign In'}
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="auth-footer">
+          <p>© 2026 GreenPoints. Building a sustainable future together.</p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,165 +1,230 @@
-import React, { useState, useRef, useEffect } from "react";
-import { storage, db, auth } from "../../services/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
-import "./RaiseComplaint.css";
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import './RaiseComplaint.css';
 
 export default function RaiseComplaint() {
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
+  
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    anonymous: false
+  });
+  
   const [image, setImage] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
   const [location, setLocation] = useState(null);
-  const [details, setDetails] = useState({ title: "", description: "", anonymous: false });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const navigate = useNavigate();
+  const [cameraActive, setCameraActive] = useState(false);
+  const [stream, setStream] = useState(null); 
 
-  // 1. Start Camera
-  const startCamera = async () => {
-    setIsCameraOpen(true);
+  // Cleanup stream on unmount
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
+
+  // Attach stream to video
+  useEffect(() => {
+    if (cameraActive && videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [cameraActive, stream]);
+
+  const handleLogout = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (err) {
-      alert("Camera access denied or unavailable.");
+      if (logout) await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to log out:', error);
     }
   };
 
-  // 2. Capture Photo
+  const startCamera = async () => {
+    try {
+      setError('');
+      const newStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      setStream(newStream);
+      setCameraActive(true);
+    } catch (err) {
+      setError('Camera error. Try using localhost or HTTPS.');
+      console.error(err);
+    }
+  };
+
   const capturePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
+    
     if (video && canvas) {
-      const context = canvas.getContext("2d");
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       
       canvas.toBlob((blob) => {
         setImage(blob);
-        setPreview(URL.createObjectURL(blob));
-        
-        // Stop stream
-        const stream = video.srcObject;
-        const tracks = stream.getTracks();
-        tracks.forEach(track => track.stop());
-        setIsCameraOpen(false);
-      }, "image/jpeg", 0.8);
+        setImagePreview(canvas.toDataURL('image/jpeg'));
+        stopCamera();
+      }, 'image/jpeg', 0.8);
     }
   };
 
-  // 3. Get Location
-  useEffect(() => {
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setCameraActive(false);
+  };
+
+  const getLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            region: `Lat: ${position.coords.latitude.toFixed(2)}, Lng: ${position.coords.longitude.toFixed(2)}`
           });
         },
-        (error) => console.error("Location access denied")
+        (err) => {
+          // Fallback if location fails (Mock Location)
+          console.warn("Location failed, using mock data");
+          setLocation({
+            latitude: 18.5204,
+            longitude: 73.8567,
+            region: "Pune, Maharashtra (Demo)"
+          });
+        }
       );
-    }
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!image) return alert("Please capture a photo first!");
-    setLoading(true);
-
-    try {
-      // Upload Image
-      const imageRef = ref(storage, `complaints/${Date.now()}_${auth.currentUser.uid}.jpg`);
-      await uploadBytes(imageRef, image);
-      const imageUrl = await getDownloadURL(imageRef);
-
-      // Save Data
-      await addDoc(collection(db, "complaints"), {
-        ...details,
-        imageUrl,
-        location,
-        userId: details.anonymous ? "anonymous" : auth.currentUser.uid,
-        userName: details.anonymous ? "Anonymous" : auth.currentUser.displayName || "Citizen",
-        status: "pending",
-        upvotes: 0,
-        upvotedBy: [],
-        createdAt: serverTimestamp(),
-      });
-
-      navigate("/dashboard");
-    } catch (err) {
-      alert("Error submitting complaint: " + err.message);
-    } finally {
-      setLoading(false);
+    } else {
+      setError('Geolocation not supported.');
     }
   };
 
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!image) return setError('Please capture a photo.');
+    if (!location) return setError('Please get location.');
+
+    setLoading(true);
+
+    // --- FRONTEND SIMULATION START ---
+    
+    // 1. Simulate Network Delay (2 seconds)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // 2. Create a "Fake" Complaint Object
+    const newComplaint = {
+      id: Date.now().toString(),
+      title: formData.title,
+      description: formData.description,
+      // Instead of uploading, we use the local preview URL
+      imageUrl: imagePreview, 
+      region: location.region,
+      userId: currentUser?.uid || 'demo-user',
+      status: 'pending',
+      upvotes: 0,
+      createdAt: new Date().toISOString()
+    };
+
+    // 3. Save to Local Browser Memory (mock database)
+    const existingComplaints = JSON.parse(localStorage.getItem('local_complaints') || '[]');
+    localStorage.setItem('local_complaints', JSON.stringify([newComplaint, ...existingComplaints]));
+
+    console.log("Complaint Saved Locally:", newComplaint);
+    
+    // --- FRONTEND SIMULATION END ---
+
+    setLoading(false);
+    navigate('/citizen/dashboard');
+  };
+
   return (
-    <div className="container">
-      <div className="card complaint-card">
-        <h2>📷 Report an Issue</h2>
-        
-        {/* Camera Section */}
-        <div className="camera-section">
-          {!preview && !isCameraOpen && (
-            <button onClick={startCamera} className="btn-primary">Open Camera</button>
-          )}
-          
-          {isCameraOpen && (
-            <div className="video-container">
-              <video ref={videoRef} autoPlay playsInline></video>
-              <button onClick={capturePhoto} className="capture-btn"></button>
-            </div>
-          )}
-
-          <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
-
-          {preview && (
-            <div className="preview-container">
-              <img src={preview} alt="Captured issue" />
-              <button onClick={() => { setPreview(null); setImage(null); }} className="text-btn">Retake</button>
-            </div>
-          )}
+    <div className="dashboard-container">
+      <nav className="dashboard-nav">
+        <div className="nav-brand"><h2>🌱 GreenPoints</h2></div>
+        <div className="nav-links">
+          <button onClick={() => navigate('/citizen/dashboard')} className="nav-link">Dashboard</button>
+          <button onClick={() => navigate('/citizen/feed')} className="nav-link">Community Feed</button>
+          <button className="nav-link active">Raise Complaint</button>
+          <button onClick={handleLogout} className="nav-link logout">Logout</button>
         </div>
+      </nav>
 
-        <form onSubmit={handleSubmit}>
-          <input 
-            type="text" 
-            placeholder="Title (e.g., Garbage Pile)" 
-            value={details.title} 
-            onChange={(e) => setDetails({...details, title: e.target.value})} 
-            required 
-          />
-          <textarea 
-            placeholder="Describe the issue..." 
-            value={details.description} 
-            onChange={(e) => setDetails({...details, description: e.target.value})} 
-            required 
-          />
-          
-          <div className="checkbox-group">
-            <label>
-              <input 
-                type="checkbox" 
-                checked={details.anonymous} 
-                onChange={(e) => setDetails({...details, anonymous: e.target.checked})} 
-              />
-              Submit Anonymously
-            </label>
-          </div>
+      <div className="dashboard-content">
+        <div className="form-container">
+          <h1>Raise a Complaint</h1>
+          <p className="form-subtitle">Report environmental issues (Demo Mode)</p>
 
-          <div className="location-status">
-            {location ? "📍 Location Detected" : "⚠️ Enabling GPS..."}
-          </div>
+          {error && <div className="error-message">{error}</div>}
 
-          <button type="submit" disabled={loading} className="btn-primary full-width">
-            {loading ? "Submitting..." : "Submit Complaint"}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="complaint-form">
+            <div className="form-group">
+              <label>Complaint Title</label>
+              <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Brief title" required />
+            </div>
+
+            <div className="form-group">
+              <label>Description</label>
+              <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Describe the issue..." rows="5" required />
+            </div>
+
+            <div className="form-group">
+              <label>Capture Photo</label>
+              {!cameraActive && !imagePreview && (
+                <button type="button" onClick={startCamera} className="camera-button">📷 Open Camera</button>
+              )}
+              {cameraActive && (
+                <div className="camera-container">
+                  <video ref={videoRef} autoPlay playsInline muted />
+                  <button type="button" onClick={capturePhoto} className="capture-button">Capture Photo</button>
+                  <button type="button" onClick={stopCamera} className="cancel-button">Cancel</button>
+                </div>
+              )}
+              {imagePreview && (
+                <div className="image-preview-container">
+                  <img src={imagePreview} alt="Preview" className="image-preview" />
+                  <button type="button" onClick={() => { setImage(null); setImagePreview(null); }} className="remove-button">Remove & Retake</button>
+                </div>
+              )}
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
+            </div>
+
+            <div className="form-group">
+              <label>Location</label>
+              {!location ? (
+                <button type="button" onClick={getLocation} className="location-button">📍 Get Location</button>
+              ) : (
+                <div className="location-display"><span>✅ {location.region}</span></div>
+              )}
+            </div>
+
+            <button type="submit" disabled={loading || !image || !location} className="submit-button">
+              {loading ? 'Simulating Upload...' : 'Submit Complaint (Demo)'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

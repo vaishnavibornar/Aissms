@@ -1,84 +1,100 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import LandingPage from './components/layout/LandingPage';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/common/ProtectedRoute';
+
+// Auth Components
+import Login from './components/auth/Login';
+import SignUp from './components/auth/SignUp';
 import Auth from './components/auth/Auth';
+
+// Citizen Components
+import CitizenDashboard from './components/citizen/CitizenDashboard';
 import RaiseComplaint from './components/citizen/RaiseComplaint';
 import CommunityFeed from './components/citizen/CommunityFeed';
-import CitizenDashboard from './components/citizen/CitizenDashboard';
+import CitizenProfile from './components/citizen/CitizenProfile';
+import Emergency from './components/citizen/Emergency';
+
+// Admin Components
 import AdminDashboard from './components/admin/AdminDashboard';
-import ProtectedRoute from './components/common/ProtectedRoute';
+import ManageComplaints from './components/admin/ManageComplaints';
+
 import './App.css';
-
-// Simple Layout wrapper to hide Navbar on Landing/Auth pages
-const Layout = ({ children }) => {
-  const { currentUser, userRole } = useAuth();
-  
-  // Don't show navbar if not logged in
-  if (!currentUser) return children;
-
-  return (
-    <>
-      <nav className="navbar">
-        <div className="logo">GreenPoints</div>
-        <div className="nav-links">
-          {userRole === 'citizen' && (
-            <>
-              <a href="/dashboard">Feed</a>
-              <a href="/raise">Report</a>
-              <a href="/profile">Profile</a>
-            </>
-          )}
-          <button onClick={() => window.location.reload()}>Logout</button>
-        </div>
-      </nav>
-      {children}
-    </>
-  );
-};
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Auth />} />
-          
-          {/* 👇 THIS IS THE MISSING LINE CAUSING THE BLANK PAGE 👇 */}
           <Route path="/signup" element={<Auth />} />
-
-          {/* Protected Routes */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute requiredRole="citizen">
-              <Layout><CommunityFeed /></Layout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/raise" element={
-            <ProtectedRoute requiredRole="citizen">
-              <Layout><RaiseComplaint /></Layout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/profile" element={
-            <ProtectedRoute requiredRole="citizen">
-              <Layout><CitizenDashboard /></Layout>
-            </ProtectedRoute>
-          } />
           
-          <Route path="/admin" element={
-            <ProtectedRoute requiredRole="admin">
-              <Layout><AdminDashboard /></Layout>
-            </ProtectedRoute>
-          } />
+          {/* Citizen Routes */}
+          <Route 
+            path="/citizen/dashboard" 
+            element={
+              <ProtectedRoute allowedRole="citizen">
+                <CitizenDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/citizen/raise-complaint" 
+            element={
+              <ProtectedRoute allowedRole="citizen">
+                <RaiseComplaint />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/citizen/feed" 
+            element={
+              <ProtectedRoute allowedRole="citizen">
+                <CommunityFeed />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/citizen/profile" 
+            element={
+              <ProtectedRoute allowedRole="citizen">
+                <CitizenProfile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/citizen/emergency" 
+            element={
+              <ProtectedRoute allowedRole="citizen">
+                <Emergency />
+              </ProtectedRoute>
+            } 
+          />
           
-          {/* Catch all - redirect to home */}
-          <Route path="*" element={<Navigate to="/" />} />
+          {/* Admin Routes */}
+          <Route 
+            path="/admin/dashboard" 
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/complaints" 
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <ManageComplaints />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Default Route */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

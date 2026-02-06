@@ -1,65 +1,138 @@
-/* Navigation Bar */
-.navbar {
-  background-color: var(--primary);
-  padding: 0 20px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.logo {
+:root {
+  --primary-green: #4a7c2c;
+  --dark-green: #2d5016;
+  --light-green: #6ea83f;
+  --bg-light: #f8faf9;
+  --text-dark: #333;
+  --text-light: #666;
+  --border-color: #e0e0e0;
+}
+
+body {
+  font-family: 'Archivo', sans-serif;
+  color: var(--text-dark);
+  background: var(--bg-light);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
   font-family: 'Bitter', serif;
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: var(--white);
-  letter-spacing: 0.5px;
+  line-height: 1.2;
 }
 
-.nav-links {
-  display: flex;
-  gap: 20px;
-  align-items: center;
+button {
+  font-family: 'Archivo', sans-serif;
 }
 
-.nav-links a {
-  color: rgba(255, 255, 255, 0.9);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
-  transition: all 0.2s;
-  padding: 8px 12px;
-  border-radius: 6px;
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-.nav-links a:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--white);
+::-webkit-scrollbar-track {
+  background: #f0f0f0;
 }
 
-.nav-links button {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--white);
-  padding: 8px 16px;
-  border-radius: 6px;
+::-webkit-scrollbar-thumb {
+  background: #4a7c2c;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2d5016;
+}
+
+/* Selection Styling */
+::selection {
+  background: #4a7c2c;
+  color: white;
+}
+
+::-moz-selection {
+  background: #4a7c2c;
+  color: white;
+}
+
+/* Focus Styles */
+*:focus-visible {
+  outline: 2px solid #4a7c2c;
+  outline-offset: 2px;
+}
+
+/* Animation Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility Classes */
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 0.875rem;
+  border-radius: 8px;
+  border-left: 4px solid #c33;
   font-size: 0.9rem;
-  font-weight: 500;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 1rem;
 }
 
-.nav-links button:hover {
-  background: var(--danger);
-  border-color: var(--danger);
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-/* Responsive adjustments */
-@media (max-width: 600px) {
-  .navbar { padding: 0 15px; }
-  .logo { font-size: 1.2rem; }
-  .nav-links { gap: 10px; }
-  .nav-links a { font-size: 0.85rem; padding: 6px 8px; }
+.empty-state p {
+  color: #666;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+  body {
+    font-size: 0.95rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  nav,
+  .nav-links,
+  button {
+    display: none;
+  }
 }
