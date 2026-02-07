@@ -1,5 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  doc,
+  updateDoc,
+  increment,
+  getDoc,
+  setDoc
+} from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import './RaiseComplaint.css';
 
@@ -132,35 +143,47 @@ export default function RaiseComplaint() {
     if (!location) return setError('Please get location.');
 
     setLoading(true);
+    setError('');
 
-    // --- FRONTEND SIMULATION START ---
-    
-    // 1. Simulate Network Delay (2 seconds)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Use preview URL so we don't hang on Storage upload; save to Firestore first
+      let imageUrl = imagePreview;
+      const userId = formData.anonymous ? null : (currentUser?.uid || null);
 
-    // 2. Create a "Fake" Complaint Object
-    const newComplaint = {
-      id: Date.now().toString(),
-      title: formData.title,
-      description: formData.description,
-      imageUrl: imagePreview, 
-      region: location.region,
-      userId: formData.anonymous ? null : (currentUser?.uid || 'demo-user'),
-      anonymous: formData.anonymous,
-      status: 'pending',
-      upvotes: 0,
-      createdAt: new Date().toISOString()
-    };
+      await addDoc(collection(db, 'complaints'), {
+        title: formData.title,
+        description: formData.description,
+        imageUrl,
+        region: location.region,
+        userId,
+        anonymous: formData.anonymous,
+        status: 'pending',
+        upvotes: 0,
+        createdAt: serverTimestamp()
+      });
 
-    const existingComplaints = JSON.parse(localStorage.getItem('local_complaints') || '[]');
-    localStorage.setItem('local_complaints', JSON.stringify([newComplaint, ...existingComplaints]));
+      if (!formData.anonymous && currentUser?.uid) {
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          await updateDoc(userRef, { complaintsRaised: increment(1) });
+        } else {
+          await setDoc(userRef, { complaintsRaised: 1, role: 'citizen' }, { merge: true });
+        }
+      }
 
-    console.log("Complaint Saved Locally:", newComplaint);
-    
-    // --- FRONTEND SIMULATION END ---
-
-    setLoading(false);
-    navigate('/citizen/dashboard');
+      navigate('/citizen/dashboard');
+    } catch (err) {
+      console.error('Failed to submit complaint:', err);
+      const message =
+        err?.message ||
+        (err?.code === 'permission-denied'
+          ? 'Permission denied. Check Firestore rules allow create on "complaints".'
+          : 'Failed to submit. Check console and Firestore rules.');
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -178,7 +201,7 @@ export default function RaiseComplaint() {
       <div className="dashboard-content">
         <div className="form-container">
           <h1>Raise a Complaint</h1>
-          <p className="form-subtitle">Report environmental issues (Demo Mode)</p>
+          <p className="form-subtitle">Report environmental issues. Your complaint will appear in My Complaints and for admins.</p>
 
           {error && <div className="error-message">{error}</div>}
 
@@ -280,7 +303,7 @@ export default function RaiseComplaint() {
               disabled={loading || !image || !location}
               className="submit-button"
             >
-              {loading ? 'Simulating Upload...' : 'Submit Complaint (Demo)'}
+              {loading ? 'Submitting...' : 'Submit Complaint'}
             </button>
           </form>
         </div>

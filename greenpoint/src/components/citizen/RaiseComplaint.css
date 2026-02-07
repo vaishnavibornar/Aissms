@@ -21,6 +21,17 @@
   margin-bottom: 2rem;
 }
 
+.error-message {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
 .complaint-form {
   display: flex;
   flex-direction: column;

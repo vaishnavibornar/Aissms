@@ -97,6 +97,9 @@ export default function AdminDashboard() {
           <button onClick={() => navigate('/admin/complaints')} className="nav-link">
             Manage Complaints
           </button>
+          <button onClick={() => navigate('/admin/analytics')} className="nav-link">
+            Analytics
+          </button>
           <button onClick={handleLogout} className="nav-link logout">
             Logout
           </button>
