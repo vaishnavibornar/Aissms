@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../contexts/AuthContext';
+import { getRegionDisplayName } from '../../utils/regionDisplay';
 import './CitizenDashboard.css';
 
 export default function CitizenDashboard() {
@@ -169,7 +170,7 @@ export default function CitizenDashboard() {
                   </div>
                   <p className="complaint-description">{complaint.description}</p>
                   <div className="complaint-meta">
-                    <span>📍 {complaint.region}</span>
+                    <span>📍 {getRegionDisplayName(complaint.region)}</span>
                     <span>👍 {complaint.upvotes || 0} upvotes</span>
                     <span className="priority-badge">
                       Priority: {getPriorityLabel(complaint.upvotes || 0)}

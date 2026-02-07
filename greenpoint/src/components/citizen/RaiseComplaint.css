@@ -162,6 +162,15 @@
   border-radius: 8px;
   color: #2d5016;
   font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.location-coords {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #555;
 }
 
 .submit-button {

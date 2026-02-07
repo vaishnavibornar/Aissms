@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import DashboardRedirect from './components/common/DashboardRedirect';
 
 // Layout Components
 import LandingPage from './components/layout/LandingPage'; // 👈 Import the Landing Page
@@ -33,8 +34,8 @@ function App() {
           
           <Route path="/login" element={<Auth />} />
           <Route path="/signup" element={<Auth />} />
-          
-          
+          <Route path="/dashboard" element={<DashboardRedirect />} />
+
           {/* Citizen Routes */}
           <Route 
             path="/citizen/dashboard" 

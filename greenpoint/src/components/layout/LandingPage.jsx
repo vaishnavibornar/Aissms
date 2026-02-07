@@ -5,11 +5,9 @@ import './LandingPage.css';
 export default function LandingPage() {
   const navigate = useNavigate();
 
-  // Smart Navigation: Sends user to Signup with Role pre-selected
+  // Pass selected role via React Router state so Signup/Login can hide the role toggle
   const handleRoleSelect = (role) => {
-    // Ideally, pass this state to your Auth component via location state
-    // For now, we direct them to signup
-    navigate('/signup'); 
+    navigate('/signup', { state: { role } });
   };
 
   return (
