@@ -18,6 +18,7 @@ import Emergency from './components/citizen/Emergency';
 // Admin Components
 import AdminDashboard from './components/admin/AdminDashboard';
 import ManageComplaints from './components/admin/ManageComplaints';
+import AdminAnalytics from './components/admin/AdminAnalytics';
 
 import './App.css';
 
@@ -32,6 +33,7 @@ function App() {
           
           <Route path="/login" element={<Auth />} />
           <Route path="/signup" element={<Auth />} />
+          
           
           {/* Citizen Routes */}
           <Route 
@@ -89,6 +91,14 @@ function App() {
             element={
               <ProtectedRoute allowedRole="admin">
                 <ManageComplaints />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/analytics" 
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <AdminAnalytics />
               </ProtectedRoute>
             } 
           />
