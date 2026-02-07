@@ -100,18 +100,41 @@ export default function RaiseComplaint() {
     setCameraActive(false);
   };
 
+  // Reverse geocode coordinates to a human-readable region name (for display in feed/admin)
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        { headers: { 'Accept-Language': 'en', 'User-Agent': 'GreenPoints-App' } }
+      );
+      const data = await res.json();
+      const addr = data?.address || {};
+      const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
+      const state = addr.state || addr.region || '';
+      const country = addr.country || '';
+      const parts = [city, state, country].filter(Boolean);
+      return parts.length ? parts.join(', ') : `Location (${lat.toFixed(2)}, ${lng.toFixed(2)})`;
+    } catch (e) {
+      console.warn('Reverse geocode failed:', e);
+      return `Location (${lat.toFixed(2)}, ${lng.toFixed(2)})`;
+    }
+  };
+
   const getLocation = () => {
     if (navigator.geolocation) {
+      setError('');
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const regionName = await reverseGeocode(lat, lng);
           setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            region: `Lat: ${position.coords.latitude.toFixed(2)}, Lng: ${position.coords.longitude.toFixed(2)}`
+            latitude: lat,
+            longitude: lng,
+            region: regionName
           });
         },
         (err) => {
-          // Fallback if location fails (Mock Location)
           console.warn("Location failed, using mock data");
           setLocation({
             latitude: 18.5204,
@@ -155,6 +178,8 @@ export default function RaiseComplaint() {
         description: formData.description,
         imageUrl,
         region: location.region,
+        latitude: location.latitude,
+        longitude: location.longitude,
         userId,
         anonymous: formData.anonymous,
         status: 'pending',
@@ -272,6 +297,9 @@ export default function RaiseComplaint() {
               ) : (
                 <div className="location-display">
                   <span>✅ {location.region}</span>
+                  <span className="location-coords">
+                    Coordinates: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                  </span>
                 </div>
               )}
             </div>

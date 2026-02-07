@@ -3,7 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, onSnapshot, doc, updateDoc, orderBy } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../contexts/AuthContext';
+import { getRegionDisplayName, isCoordinateRegion } from '../../utils/regionDisplay';
 import './ManageComplaints.css';
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'rejected', label: 'Rejected' }
+];
+
+function getStatusBadgeClass(status) {
+  const map = {
+    pending: 'mc-badge-pending',
+    approved: 'mc-badge-approved',
+    assigned: 'mc-badge-assigned',
+    resolved: 'mc-badge-resolved',
+    rejected: 'mc-badge-rejected'
+  };
+  return `mc-badge ${map[status] || ''}`.trim();
+}
+
+function getPriorityStyle(upvotes) {
+  if (upvotes >= 50) return { label: 'Critical', color: '#f87171', bg: 'rgba(239, 68, 68, 0.15)' };
+  if (upvotes >= 20) return { label: 'High', color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.15)' };
+  if (upvotes >= 10) return { label: 'Medium', color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.15)' };
+  return { label: 'Low', color: '#71717a', bg: 'rgba(255, 255, 255, 0.08)' };
+}
 
 export default function ManageComplaints() {
   const { logout } = useAuth();
@@ -31,7 +59,6 @@ export default function ManageComplaints() {
   ];
 
   useEffect(() => {
-    // Real-time listener for all complaints
     const q = query(
       collection(db, 'complaints'),
       orderBy('createdAt', 'desc')
@@ -39,16 +66,20 @@ export default function ManageComplaints() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const complaintsData = [];
-      const regionsSet = new Set();
+      const rawRegions = new Set();
 
-      snapshot.forEach((doc) => {
-        const data = { id: doc.id, ...doc.data() };
+      snapshot.forEach((docSnap) => {
+        const data = { id: docSnap.id, ...docSnap.data() };
         complaintsData.push(data);
-        regionsSet.add(data.region);
+        if (data.region) rawRegions.add(data.region);
       });
+      const rawList = Array.from(rawRegions);
+      const namedRegions = rawList.filter((r) => !isCoordinateRegion(r));
+      const hasCoordinateRegion = rawList.some(isCoordinateRegion);
+      const regionOptions = ['all', ...namedRegions, ...(hasCoordinateRegion ? ['__other__'] : [])];
 
       setComplaints(complaintsData);
-      setRegions(['all', ...Array.from(regionsSet)]);
+      setRegions(regionOptions);
       setLoading(false);
     });
 
@@ -56,19 +87,19 @@ export default function ManageComplaints() {
   }, []);
 
   useEffect(() => {
-    // Apply filters
     let filtered = complaints;
 
     if (filters.status !== 'all') {
-      filtered = filtered.filter(c => c.status === filters.status);
+      filtered = filtered.filter((c) => c.status === filters.status);
     }
-
     if (filters.region !== 'all') {
-      filtered = filtered.filter(c => c.region === filters.region);
+      filtered =
+        filters.region === '__other__'
+          ? filtered.filter((c) => isCoordinateRegion(c.region))
+          : filtered.filter((c) => c.region === filters.region);
     }
-
     if (filters.priority !== 'all') {
-      filtered = filtered.filter(c => {
+      filtered = filtered.filter((c) => {
         const upvotes = c.upvotes || 0;
         if (filters.priority === 'critical') return upvotes >= 50;
         if (filters.priority === 'high') return upvotes >= 20 && upvotes < 50;
@@ -91,10 +122,7 @@ export default function ManageComplaints() {
   };
 
   const handleFilterChange = (filterType, value) => {
-    setFilters({
-      ...filters,
-      [filterType]: value
-    });
+    setFilters((prev) => ({ ...prev, [filterType]: value }));
   };
 
   const handleApprove = async (complaintId) => {
@@ -110,7 +138,6 @@ export default function ManageComplaints() {
 
   const handleReject = async (complaintId) => {
     if (!window.confirm('Are you sure you want to reject this complaint?')) return;
-    
     try {
       await updateDoc(doc(db, 'complaints', complaintId), {
         status: 'rejected',
@@ -123,7 +150,6 @@ export default function ManageComplaints() {
 
   const handleAssign = async () => {
     if (!selectedComplaint || !assignDepartment) return;
-
     try {
       await updateDoc(doc(db, 'complaints', selectedComplaint.id), {
         status: 'assigned',
@@ -140,7 +166,6 @@ export default function ManageComplaints() {
 
   const handleResolve = async (complaintId) => {
     if (!window.confirm('Mark this complaint as resolved?')) return;
-
     try {
       await updateDoc(doc(db, 'complaints', complaintId), {
         status: 'resolved',
@@ -152,41 +177,23 @@ export default function ManageComplaints() {
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: '#f59e0b',
-      approved: '#3b82f6',
-      assigned: '#8b5cf6',
-      resolved: '#10b981',
-      rejected: '#ef4444'
-    };
-    return colors[status] || '#6b7280';
-  };
-
-  const getPriorityLabel = (upvotes) => {
-    if (upvotes >= 50) return { label: 'Critical', color: '#ef4444' };
-    if (upvotes >= 20) return { label: 'High', color: '#f59e0b' };
-    if (upvotes >= 10) return { label: 'Medium', color: '#3b82f6' };
-    return { label: 'Low', color: '#6b7280' };
-  };
-
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container manage-complaints-page">
       <nav className="dashboard-nav admin-nav">
         <div className="nav-brand">
           <h2>🌱 GreenPoints Admin</h2>
         </div>
         <div className="nav-links">
-          <button onClick={() => navigate('/admin/dashboard')} className="nav-link">
+          <button type="button" onClick={() => navigate('/admin/dashboard')} className="nav-link">
             Dashboard
           </button>
-          <button onClick={() => navigate('/admin/complaints')} className="nav-link active">
+          <button type="button" onClick={() => navigate('/admin/complaints')} className="nav-link active">
             Manage Complaints
           </button>
-          <button onClick={() => navigate('/admin/analytics')} className="nav-link">
+          <button type="button" onClick={() => navigate('/admin/analytics')} className="nav-link">
             Analytics
           </button>
-          <button onClick={handleLogout} className="nav-link logout">
+          <button type="button" onClick={handleLogout} className="nav-link logout">
             Logout
           </button>
         </div>
@@ -198,230 +205,248 @@ export default function ManageComplaints() {
           <p>Review, approve, and assign complaints to departments</p>
         </div>
 
-        <div className="filters-section">
-          <div className="filter-group">
-            <label>Status</label>
-            <select 
+        <div className="mc-filters-bar">
+          <div className="mc-filter-wrap">
+            <label htmlFor="mc-filter-status">Status</label>
+            <select
+              id="mc-filter-status"
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
             >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="assigned">Assigned</option>
-              <option value="resolved">Resolved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label>Region</label>
-            <select 
-              value={filters.region}
-              onChange={(e) => handleFilterChange('region', e.target.value)}
-            >
-              {regions.map(region => (
-                <option key={region} value={region}>
-                  {region === 'all' ? 'All Regions' : region}
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </select>
           </div>
-
-          <div className="filter-group">
-            <label>Priority</label>
-            <select 
+          <div className="mc-filter-wrap">
+            <label htmlFor="mc-filter-region">Region</label>
+            <select
+              id="mc-filter-region"
+              value={filters.region}
+              onChange={(e) => handleFilterChange('region', e.target.value)}
+            >
+              <option value="all">All regions</option>
+              {regions.filter((r) => r !== 'all').map((region) => (
+                <option key={region} value={region}>
+                  {region === '__other__' ? 'Other location' : region}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mc-filter-wrap">
+            <label htmlFor="mc-filter-priority">Priority</label>
+            <select
+              id="mc-filter-priority"
               value={filters.priority}
               onChange={(e) => handleFilterChange('priority', e.target.value)}
             >
-              <option value="all">All Priorities</option>
+              <option value="all">All priorities</option>
               <option value="critical">Critical (50+ votes)</option>
-              <option value="high">High (20-49 votes)</option>
-              <option value="medium">Medium (10-19 votes)</option>
-              <option value="low">Low (&lt;10 votes)</option>
+              <option value="high">High (20–49)</option>
+              <option value="medium">Medium (10–19)</option>
+              <option value="low">Low (&lt;10)</option>
             </select>
           </div>
-
-          <div className="filter-results">
-            Showing {filteredComplaints.length} of {complaints.length} complaints
+          <div className="mc-filter-results">
+            {filteredComplaints.length} of {complaints.length} complaints
           </div>
         </div>
 
         {loading ? (
-          <div className="loading">Loading complaints...</div>
+          <div className="mc-loading">Loading complaints…</div>
         ) : filteredComplaints.length === 0 ? (
-          <div className="empty-state">
+          <div className="mc-empty">
             <p>No complaints match the current filters.</p>
           </div>
         ) : (
-          <div className="complaints-table-container">
-            <table className="complaints-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Region</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Upvotes</th>
-                  <th>Department</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredComplaints.map((complaint) => {
-                  const priority = getPriorityLabel(complaint.upvotes || 0);
-                  
-                  return (
-                    <tr key={complaint.id}>
-                      <td>
-                        <div className="complaint-title-cell">
-                          <strong>{complaint.title}</strong>
-                          <small>{new Date(complaint.createdAt).toLocaleDateString()}</small>
-                        </div>
-                      </td>
-                      <td>{complaint.region}</td>
-                      <td>
-                        <span 
-                          className="priority-badge"
-                          style={{ backgroundColor: priority.color }}
-                        >
-                          {priority.label}
-                        </span>
-                      </td>
-                      <td>
-                        <span 
-                          className="status-badge"
-                          style={{ backgroundColor: getStatusColor(complaint.status) }}
-                        >
-                          {complaint.status}
-                        </span>
-                      </td>
-                      <td>{complaint.upvotes || 0}</td>
-                      <td>{complaint.assignedDepartment || '-'}</td>
-                      <td>
-                        <div className="action-buttons">
+          <div className="mc-table-glass">
+            <div className="mc-table-wrap">
+              <table className="mc-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Region</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Upvotes</th>
+                    <th>Department</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredComplaints.map((complaint) => {
+                    const priority = getPriorityStyle(complaint.upvotes || 0);
+                    return (
+                      <tr key={complaint.id}>
+                        <td>
+                          <div className="mc-title-cell">
+                            <strong>{complaint.title}</strong>
+                            <small>{new Date(complaint.createdAt).toLocaleDateString()}</small>
+                          </div>
+                        </td>
+                        <td>{getRegionDisplayName(complaint.region)}</td>
+                        <td>
+                          <span
+                            className="mc-priority-badge"
+                            style={{ backgroundColor: priority.bg, color: priority.color }}
+                          >
+                            {priority.label}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={getStatusBadgeClass(complaint.status)}>
+                            {complaint.status}
+                          </span>
+                        </td>
+                        <td>{complaint.upvotes || 0}</td>
+                        <td>{complaint.assignedDepartment || '—'}</td>
+                        <td className="mc-action-cell">
                           {complaint.status === 'pending' && (
                             <>
-                              <button 
+                              <button
+                                type="button"
                                 onClick={() => handleApprove(complaint.id)}
-                                className="action-btn approve-btn"
+                                className="mc-action-btn mc-action-btn-approve"
+                                title="Approve"
                               >
-                                ✓ Approve
+                                <span className="mc-action-icon">✓</span>
+                                <span className="mc-action-label">Approve</span>
                               </button>
-                              <button 
+                              <button
+                                type="button"
                                 onClick={() => handleReject(complaint.id)}
-                                className="action-btn reject-btn"
+                                className="mc-action-btn mc-action-btn-reject"
+                                title="Reject"
                               >
-                                ✗ Reject
+                                <span className="mc-action-icon">✗</span>
+                                <span className="mc-action-label">Reject</span>
                               </button>
                             </>
                           )}
                           {complaint.status === 'approved' && (
-                            <button 
+                            <button
+                              type="button"
                               onClick={() => setSelectedComplaint(complaint)}
-                              className="action-btn assign-btn"
+                              className="mc-action-btn mc-action-btn-assign"
+                              title="Assign"
                             >
-                              📋 Assign
+                              <span className="mc-action-icon">📋</span>
+                              <span className="mc-action-label">Assign</span>
                             </button>
                           )}
                           {complaint.status === 'assigned' && (
-                            <button 
+                            <button
+                              type="button"
                               onClick={() => handleResolve(complaint.id)}
-                              className="action-btn resolve-btn"
+                              className="mc-action-btn mc-action-btn-resolve"
+                              title="Resolve"
                             >
-                              ✓ Resolve
+                              <span className="mc-action-icon">✓</span>
+                              <span className="mc-action-label">Resolve</span>
                             </button>
                           )}
-                          <button 
+                          <button
+                            type="button"
                             onClick={() => setSelectedComplaint(complaint)}
-                            className="action-btn view-btn"
+                            className="mc-action-btn mc-action-btn-view"
+                            title="View details"
                           >
-                            👁️ View
+                            <span className="mc-action-icon">👁</span>
+                            <span className="mc-action-label">View</span>
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Modal for viewing/assigning complaint */}
       {selectedComplaint && (
-        <div className="modal-overlay" onClick={() => setSelectedComplaint(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button 
-              className="modal-close"
+        <div
+          className="mc-modal-overlay"
+          onClick={() => setSelectedComplaint(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mc-modal-title"
+        >
+          <div className="mc-modal-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="mc-modal-close"
               onClick={() => setSelectedComplaint(null)}
+              aria-label="Close"
             >
               ✕
             </button>
-            
-            <h2>{selectedComplaint.title}</h2>
-            
+            <h2 id="mc-modal-title">{selectedComplaint.title}</h2>
+
             {selectedComplaint.imageUrl && (
-              <img 
+              <img
                 src={selectedComplaint.imageUrl}
                 alt="Complaint"
-                className="modal-image"
+                className="mc-modal-image"
               />
             )}
-            
-            <div className="modal-details">
-              <div className="detail-row">
-                <strong>Description:</strong>
+
+            <div className="mc-modal-details">
+              <div className="mc-detail-row">
+                <strong>Description</strong>
                 <p>{selectedComplaint.description}</p>
               </div>
-              <div className="detail-row">
-                <strong>Region:</strong>
-                <span>{selectedComplaint.region}</span>
+              <div className="mc-detail-row">
+                <strong>Region</strong>
+                <span>{getRegionDisplayName(selectedComplaint.region)}</span>
               </div>
-              <div className="detail-row">
-                <strong>Status:</strong>
-                <span 
-                  className="status-badge"
-                  style={{ backgroundColor: getStatusColor(selectedComplaint.status) }}
-                >
+              <div className="mc-detail-row">
+                <strong>Status</strong>
+                <span className={getStatusBadgeClass(selectedComplaint.status)}>
                   {selectedComplaint.status}
                 </span>
               </div>
-              <div className="detail-row">
-                <strong>Upvotes:</strong>
+              <div className="mc-detail-row">
+                <strong>Upvotes</strong>
                 <span>{selectedComplaint.upvotes || 0}</span>
               </div>
-              <div className="detail-row">
-                <strong>Created:</strong>
+              <div className="mc-detail-row">
+                <strong>Created</strong>
                 <span>{new Date(selectedComplaint.createdAt).toLocaleString()}</span>
               </div>
               {selectedComplaint.assignedDepartment && (
-                <div className="detail-row">
-                  <strong>Assigned to:</strong>
+                <div className="mc-detail-row">
+                  <strong>Assigned to</strong>
                   <span>{selectedComplaint.assignedDepartment}</span>
                 </div>
               )}
             </div>
 
             {selectedComplaint.status === 'approved' && (
-              <div className="assign-section">
-                <label>Assign to Department:</label>
-                <select 
+              <div className="mc-assign-section">
+                <label htmlFor="mc-assign-dept">Assign to department</label>
+                <select
+                  id="mc-assign-dept"
                   value={assignDepartment}
                   onChange={(e) => setAssignDepartment(e.target.value)}
                 >
-                  <option value="">Select Department</option>
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
+                  <option value="">Select department</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
                   ))}
                 </select>
-                <button 
+                <button
+                  type="button"
                   onClick={handleAssign}
                   disabled={!assignDepartment}
-                  className="assign-button"
+                  className="mc-assign-btn"
                 >
-                  Assign Complaint
+                  Assign complaint
                 </button>
               </div>
             )}

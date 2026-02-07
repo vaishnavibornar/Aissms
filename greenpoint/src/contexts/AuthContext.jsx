@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged 
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
@@ -16,15 +16,18 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  // Derived for backward compatibility (ProtectedRoute, etc.)
+  const userRole = userProfile?.role ?? null;
 
   // Sign up new user with role
   async function signup(email, password, role, username) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
-    // Create user document in Firestore
+
     await setDoc(doc(db, 'users', user.uid), {
       email: user.email,
       role: role,
@@ -33,35 +36,45 @@ export function AuthProvider({ children }) {
       complaintsRaised: 0,
       createdAt: new Date().toISOString()
     });
-    
+
     return user;
   }
 
-  // Sign in existing user
+  // Sign in: return immediately after Firebase Auth (no Firestore await)
   async function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    return userCredential;
   }
 
-  // Sign out user
   function logout() {
     return signOut(auth);
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      
-      if (user) {
-        // Fetch user role from Firestore
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          setUserRole(userDoc.data().role);
-        }
-      } else {
-        setUserRole(null);
+
+      if (!user) {
+        setUserProfile(null);
+        setProfileLoading(false);
+        setAuthLoading(false);
+        return;
       }
-      
-      setLoading(false);
+
+      setAuthLoading(false);
+      setProfileLoading(true);
+
+      // Background sync: fetch profile without blocking auth
+      getDoc(doc(db, 'users', user.uid))
+        .then((snap) => {
+          if (snap.exists()) {
+            setUserProfile({ id: snap.id, ...snap.data() });
+          } else {
+            setUserProfile(null);
+          }
+        })
+        .catch(() => setUserProfile(null))
+        .finally(() => setProfileLoading(false));
     });
 
     return unsubscribe;
@@ -70,6 +83,9 @@ export function AuthProvider({ children }) {
   const value = {
     currentUser,
     userRole,
+    userProfile,
+    authLoading,
+    profileLoading,
     signup,
     login,
     logout
@@ -77,7 +93,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {!authLoading && children}
     </AuthContext.Provider>
   );
 }

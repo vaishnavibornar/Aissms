@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../contexts/AuthContext';
+import { getRegionDisplayName, isCoordinateRegion } from '../../utils/regionDisplay';
 import './CommunityFeed.css';
 
 export default function CommunityFeed() {
@@ -22,16 +23,20 @@ export default function CommunityFeed() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const complaintsData = [];
-      const regionsSet = new Set();
+      const rawRegions = new Set();
       
       snapshot.forEach((doc) => {
         const data = { id: doc.id, ...doc.data() };
         complaintsData.push(data);
-        regionsSet.add(data.region);
+        if (data.region) rawRegions.add(data.region);
       });
+      const rawList = Array.from(rawRegions);
+      const namedRegions = rawList.filter(r => !isCoordinateRegion(r));
+      const hasCoordinateRegion = rawList.some(isCoordinateRegion);
+      const regionOptions = ['all', ...namedRegions, ...(hasCoordinateRegion ? ['__other__'] : [])];
       
       setComplaints(complaintsData);
-      setRegions(['all', ...Array.from(regionsSet)]);
+      setRegions(regionOptions);
       setLoading(false);
     });
 
@@ -99,9 +104,11 @@ export default function CommunityFeed() {
     return colors[status] || '#6b7280';
   };
 
-  const filteredComplaints = filterRegion === 'all' 
-    ? complaints 
-    : complaints.filter(c => c.region === filterRegion);
+  const filteredComplaints = filterRegion === 'all'
+    ? complaints
+    : filterRegion === '__other__'
+      ? complaints.filter(c => isCoordinateRegion(c.region))
+      : complaints.filter(c => c.region === filterRegion);
 
   return (
     <div className="dashboard-container">
@@ -146,7 +153,7 @@ export default function CommunityFeed() {
             >
               {regions.map((region) => (
                 <option key={region} value={region}>
-                  {region === 'all' ? 'All Regions' : region}
+                  {region === 'all' ? 'All Regions' : region === '__other__' ? 'Other location' : region}
                 </option>
               ))}
             </select>
@@ -189,7 +196,7 @@ export default function CommunityFeed() {
                     <p className="feed-description">{complaint.description}</p>
                     
                     <div className="feed-meta">
-                      <span>📍 {complaint.region}</span>
+                      <span>📍 {getRegionDisplayName(complaint.region)}</span>
                       <span 
                         className="priority-indicator"
                         style={{ color: priority.color }}

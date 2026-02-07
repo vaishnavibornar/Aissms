@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, onSnapshot, where } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../contexts/AuthContext';
+import { getRegionDisplayName } from '../../utils/regionDisplay';
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
@@ -166,7 +167,8 @@ export default function AdminDashboard() {
               <div className="department-stats">
                 {getDepartmentStats().map(([region, data]) => (
                   <div key={region} className="department-card">
-                    <h3>{region}</h3>
+
+                    <h3>{getRegionDisplayName(region)}</h3>
                     <div className="department-info">
                       <span>Total: {data.total}</span>
                       <span>Pending: {data.pending}</span>
@@ -195,7 +197,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="complaint-details">
                         <h4>{complaint.title}</h4>
-                        <p>{complaint.region}</p>
+                        <p>{getRegionDisplayName(complaint.region)}</p>
                       </div>
                       <button 
                         onClick={() => navigate('/admin/complaints')}
